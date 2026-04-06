@@ -103,6 +103,7 @@ private:
 
 	FVector CachedStartPos;
 
-
 	TArray<FVector> GenerateCurvedRoute(const FVector& StartPos, const FVector& StartTangentDir, const FVector& EndPos);
+
+	void ResolveNiagaraComponent();
 };

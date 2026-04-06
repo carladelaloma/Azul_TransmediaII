@@ -19,8 +19,15 @@ void UAzulWidgetHUDPlayer::SetUIState(EInteractUIState NewState)
     }
 }
 
-void UAzulWidgetHUDPlayer::SetStoryText(const FString& NewText)
+void UAzulWidgetHUDPlayer::SetStoryText(const FString& NewText, float Delay)
 {
+    if (!GetWorld())
+    {
+        return;
+    }
+
+    GetWorld()->GetTimerManager().ClearTimer(StoryTextTimer);
+
     if (NewText.IsEmpty())
     {
         StoryText->SetText(FText::GetEmpty());
@@ -30,4 +37,26 @@ void UAzulWidgetHUDPlayer::SetStoryText(const FString& NewText)
 
     StoryText->SetText(FText::FromString(NewText));
     TextBorder->SetVisibility(ESlateVisibility::Visible);
+
+    // Si Delay es 0, se queda fijo para siempre
+    if (Delay > 0.0f)
+    {
+        GetWorld()->GetTimerManager().SetTimer(
+            StoryTextTimer,
+            [this]()
+            {
+                if (StoryText)
+                {
+                    StoryText->SetText(FText::GetEmpty());
+                }
+
+                if (TextBorder)
+                {
+                    TextBorder->SetVisibility(ESlateVisibility::Hidden);
+                }
+            },
+            Delay,
+            false
+        );
+    }
 }

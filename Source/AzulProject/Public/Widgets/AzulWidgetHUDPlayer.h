@@ -48,5 +48,8 @@ public:
     void SetUIState(EInteractUIState NewState);
 
     UFUNCTION(BlueprintCallable, Category = "Azul|StoryText")
-    void SetStoryText(const FString& NewText);
+    void SetStoryText(const FString& NewText, float Delay);
+
+protected:
+    FTimerHandle StoryTextTimer;
 };

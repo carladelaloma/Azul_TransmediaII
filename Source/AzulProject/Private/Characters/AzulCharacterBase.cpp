@@ -1,5 +1,4 @@
 ﻿#include "Characters/AzulCharacterBase.h"
-//#include "Actors/AzulStoryObjectBase.h"
 //#include "Widgets/AzulWidgetBolsoBase.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Interfaces/AzulInteractuableInterface.h"
@@ -16,6 +15,7 @@
 #include "GameplayTagContainer.h"
 #include "Actors/AzulInteractuableBase.h"
 
+DEFINE_LOG_CATEGORY_STATIC(LogAzulCharacter, Log, All);
 
 // Sets default values
 AAzulCharacterBase::AAzulCharacterBase()
@@ -24,9 +24,9 @@ AAzulCharacterBase::AAzulCharacterBase()
 
     //BolsoComponent = CreateDefaultSubobject<UAzulBolsoComponent>(TEXT("BolsoComponent"));
 
-    //HiloComponent = CreateDefaultSubobject<UAzulHiloComponent>(TEXT("HiloComponent"));
-
     CurrentInteractable = nullptr;
+
+    UE_LOG(LogAzulCharacter, Warning, TEXT("[CTOR] Character creado: %s"), *GetNameSafe(this));
 }
 
 // Called when the game starts or when spawned
@@ -34,10 +34,11 @@ void AAzulCharacterBase::BeginPlay()
 {
     Super::BeginPlay();
 
-    //if (BolsoComponent)
-    //{
-    //    BolsoComponent->InitializeBolso(this);
-    //}
+    UE_LOG(LogAzulCharacter, Warning, TEXT("[BeginPlay] Character=%s | HiloActor=%s | Controller=%s | HUDWidget=%s"),
+        *GetNameSafe(this),
+        *GetNameSafe(HiloActor),
+        *GetNameSafe(GetController()),
+        *GetNameSafe(HUDWidget));
 
     if (HiloActor)
     {
@@ -45,6 +46,9 @@ void AAzulCharacterBase::BeginPlay()
             this,
             &AAzulCharacterBase::NotifyHiloHidden
         );
+
+        UE_LOG(LogAzulCharacter, Warning, TEXT("[BeginPlay] Bind a OnHiloHidden hecho correctamente con %s"),
+            *GetNameSafe(HiloActor));
     }
 
     // --- AÑADIDO MANUAL DE INTERACTUABLES INICIALES ---
@@ -55,6 +59,8 @@ void AAzulCharacterBase::BeginPlay()
         AAzulInteractuableBase::StaticClass(),
         FoundActors
     );
+
+    UE_LOG(LogAzulCharacter, Warning, TEXT("[BeginPlay] Interactuables encontrados=%d"), FoundActors.Num());
 
     for (AActor* Actor : FoundActors)
     {
@@ -73,11 +79,16 @@ void AAzulCharacterBase::BeginPlay()
             AddInteractable(
                 TScriptInterface<IAzulInteractuableInterface>(Interactable)
             );
+
+            UE_LOG(LogAzulCharacter, Warning, TEXT("[BeginPlay] Interactable inicial añadido: %s"),
+                *GetNameSafe(Interactable));
         }
+
     }
 
     SetCurrentGameplayTag();
 
+    UE_LOG(LogAzulCharacter, Warning, TEXT("[BeginPlay] ActiveStoryTags inicializados"));
 }
 
 // Called every frame
@@ -85,6 +96,20 @@ void AAzulCharacterBase::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
     CheckCrosshairTrace();
+
+    //LOG
+    static float TickAccumulator = 0.0f;
+    TickAccumulator += DeltaTime;
+    if (TickAccumulator >= 2.0f)
+    {
+        TickAccumulator = 0.0f;
+
+        UE_LOG(LogAzulCharacter, Verbose, TEXT("[Tick] Character=%s | HiloActor=%s | bMovementLockedByHilo=%d | bCanInteract=%d"),
+            *GetNameSafe(this),
+            *GetNameSafe(HiloActor),
+            bMovementLockedByHilo,
+            bCanInteract);
+    }
 }
 
 void AAzulCharacterBase::AddStoryTag(const FGameplayTag& NewTag)
@@ -222,67 +247,130 @@ void AAzulCharacterBase::SetupPlayerInputComponent(UInputComponent* PlayerInputC
 {
     Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-    UE_LOG(LogTemp, Warning, TEXT("SetupPlayerInputComponent CALLED"));
+    UE_LOG(LogAzulCharacter, Warning, TEXT("[SetupPlayerInputComponent] CALLED | Character=%s | InputComponent=%s | IA_MostrarHilo=%s"),
+        *GetNameSafe(this),
+        *GetNameSafe(PlayerInputComponent),
+        *GetNameSafe(IA_MostrarHilo));
 
-     if (UEnhancedInputComponent* EIC =
-        Cast<UEnhancedInputComponent>(PlayerInputComponent))
+    if (UEnhancedInputComponent* EIC = Cast<UEnhancedInputComponent>(PlayerInputComponent))
     {
-        UE_LOG(LogTemp, Warning, TEXT("EnhancedInputComponent FOUND"));
+        UE_LOG(LogAzulCharacter, Warning, TEXT("[SetupPlayerInputComponent] EnhancedInputComponent FOUND"));
 
-        EIC->BindAction(
-            IA_MostrarHilo,
-            ETriggerEvent::Started,
-            this,
-            &AAzulCharacterBase::OnSpacePressed
-        );
+        if (IA_MostrarHilo)
+        {
+            EIC->BindAction(
+                IA_MostrarHilo,
+                ETriggerEvent::Started,
+                this,
+                &AAzulCharacterBase::OnSpacePressed
+            );
+
+            UE_LOG(LogAzulCharacter, Warning, TEXT("[SetupPlayerInputComponent] IA_MostrarHilo bind OK"));
+        }
+        else
+        {
+            UE_LOG(LogAzulCharacter, Error, TEXT("[SetupPlayerInputComponent] IA_MostrarHilo es NULL"));
+        }
     }
     else
     {
-        UE_LOG(LogTemp, Error, TEXT("EnhancedInputComponent NOT FOUND"));
+        UE_LOG(LogAzulCharacter, Error, TEXT("[SetupPlayerInputComponent] EnhancedInputComponent NOT FOUND"));
     }
 }
 
 
 void AAzulCharacterBase::OnSpacePressed()
 {
-    //--- TUTORIAL
-    if (UGameInstance* GI = GetGameInstance())
-    {
-        if (UAzulTutorialSubsystem* TutorialSubsystem =
-            GI->GetSubsystem<UAzulTutorialSubsystem>())
-        {
-            if (TutorialSubsystem->IsTutorialActive())
-            {
-                const FGameplayTag SpaceTag =
-                    FGameplayTag::RequestGameplayTag(TEXT("Tutorial.First.Space"));
+    UE_LOG(LogAzulCharacter, Warning, TEXT("[OnSpacePressed] START | Character=%s | HiloActor=%s"),
+        *GetNameSafe(this),
+        *GetNameSafe(HiloActor));
 
-                if (!TutorialSubsystem->IsActionCompleted(SpaceTag)) {
-                    TutorialSubsystem->NotifyActionCompleted(
-                        FGameplayTag::RequestGameplayTag("Tutorial.First.Space")
-                    );
-                }
-            }
-        }
+    if (!HiloActor)
+    {
+        UE_LOG(LogAzulCharacter, Error, TEXT("[OnSpacePressed] ABORT | HiloActor es NULL"));
+        return;
     }
 
     if (UGameInstance* GI = GetGameInstance())
     {
-        if (UAzulGameSubsystem* GameSubsystem =
-            GI->GetSubsystem<UAzulGameSubsystem>())
+        if (UAzulTutorialSubsystem* TutorialSubsystem = GI->GetSubsystem<UAzulTutorialSubsystem>())
         {
-            if (!GameSubsystem->IsSequenceActive())
+            const bool bTutorialActive = TutorialSubsystem->IsTutorialActive();
+
+            UE_LOG(LogAzulCharacter, Warning, TEXT("[OnSpacePressed] TutorialSubsystem OK | IsTutorialActive=%d"), bTutorialActive);
+
+            if (bTutorialActive)
             {
-                // --- HILO ---
-                if (HiloActor->IsHiloVisible())
+                const FGameplayTag SpaceTag =
+                    FGameplayTag::RequestGameplayTag(TEXT("Tutorial.First.Space"));
+
+                const bool bCompleted = TutorialSubsystem->IsActionCompleted(SpaceTag);
+
+                UE_LOG(LogAzulCharacter, Warning, TEXT("[OnSpacePressed] Tutorial tag Tutorial.First.Space completed=%d"), bCompleted);
+
+                if (!bCompleted)
                 {
+                    TutorialSubsystem->NotifyActionCompleted(
+                        FGameplayTag::RequestGameplayTag(TEXT("Tutorial.First.Space"))
+                    );
+
+                    UE_LOG(LogAzulCharacter, Warning, TEXT("[OnSpacePressed] Tutorial.First.Space marcado como completado"));
+                }
+            }
+        }
+        else
+        {
+            UE_LOG(LogAzulCharacter, Error, TEXT("[OnSpacePressed] TutorialSubsystem es NULL"));
+        }
+    }
+    else
+    {
+        UE_LOG(LogAzulCharacter, Error, TEXT("[OnSpacePressed] GameInstance es NULL"));
+    }
+
+    if (UGameInstance* GI = GetGameInstance())
+    {
+        if (UAzulGameSubsystem* GameSubsystem = GI->GetSubsystem<UAzulGameSubsystem>())
+        {
+            const bool bSequenceActive = GameSubsystem->IsSequenceActive();
+
+            UE_LOG(LogAzulCharacter, Warning, TEXT("[OnSpacePressed] GameSubsystem OK | IsSequenceActive=%d"), bSequenceActive);
+
+            if (!bSequenceActive)
+            {
+                const bool bVisible = HiloActor->IsHiloVisible();
+
+                UE_LOG(LogAzulCharacter, Warning, TEXT("[OnSpacePressed] Hilo visible antes de toggle=%d"), bVisible);
+
+                if (bVisible)
+                {
+                    UE_LOG(LogAzulCharacter, Warning, TEXT("[OnSpacePressed] Ejecutando ForceHideHilo"));
                     HiloActor->ForceHideHilo();
                 }
                 else
                 {
+                    UE_LOG(LogAzulCharacter, Warning, TEXT("[OnSpacePressed] Ejecutando ShowHilo"));
                     HiloActor->ShowHilo();
-                    NotifyHiloShown();
+
+                    // SOLO si realmente ha quedado visible marcamos el estado y BP
+                    if (HiloActor->IsHiloVisible())
+                    {
+                        NotifyHiloShown();
+                    }
+                    else
+                    {
+                        UE_LOG(LogAzulCharacter, Error, TEXT("[OnSpacePressed] ShowHilo fue llamado pero el hilo NO quedó visible"));
+                    }
                 }
             }
+            else
+            {
+                UE_LOG(LogAzulCharacter, Warning, TEXT("[OnSpacePressed] Bloqueado porque hay secuencia activa"));
+            }
+        }
+        else
+        {
+            UE_LOG(LogAzulCharacter, Error, TEXT("[OnSpacePressed] GameSubsystem es NULL"));
         }
     }
 }
@@ -293,6 +381,12 @@ void AAzulCharacterBase::NotifyHiloShown()
 {
     bMovementLockedByHilo = true;
     GetCharacterMovement()->DisableMovement();
+
+    UE_LOG(LogAzulCharacter, Warning, TEXT("[NotifyHiloShown] Character=%s | bMovementLockedByHilo=%d | MovementMode=%d"),
+        *GetNameSafe(this),
+        bMovementLockedByHilo,
+        GetCharacterMovement() ? (int32)GetCharacterMovement()->MovementMode : -1);
+
     BP_OnHiloShown();
 }
 
@@ -300,9 +394,22 @@ void AAzulCharacterBase::NotifyHiloHidden()
 {
     bMovementLockedByHilo = false;
 
-    if (CanMoveAccordingToTutorial())
+    const bool bCanMove = CanMoveAccordingToTutorial();
+
+    UE_LOG(LogAzulCharacter, Warning, TEXT("[NotifyHiloHidden] Character=%s | bMovementLockedByHilo=%d | CanMoveAccordingToTutorial=%d"),
+        *GetNameSafe(this),
+        bMovementLockedByHilo,
+        bCanMove);
+
+    if (bCanMove)
     {
         GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+
+        UE_LOG(LogAzulCharacter, Warning, TEXT("[NotifyHiloHidden] MovementMode restaurado a WALKING"));
+    }
+    else
+    {
+        UE_LOG(LogAzulCharacter, Warning, TEXT("[NotifyHiloHidden] Movimiento sigue bloqueado por tutorial"));
     }
 
     BP_OnHiloHidden();

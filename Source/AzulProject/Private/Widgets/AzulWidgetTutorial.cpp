@@ -551,6 +551,48 @@ void UAzulWidgetTutorial::CloseAllInteractHelp()
 
 
 
+void UAzulWidgetTutorial::SetTutorialTextWithDelay(const FString& NewText, float Delay)
+{
+    if (!GetWorld())
+    {
+        return;
+    }
+
+    GetWorld()->GetTimerManager().ClearTimer(TextTimer);
+
+    if (NewText.IsEmpty())
+    {
+        TutorialText->SetText(FText::GetEmpty());
+        TextBorder->SetVisibility(ESlateVisibility::Hidden);
+        return;
+    }
+
+    TutorialText->SetText(FText::FromString(NewText));
+    TextBorder->SetVisibility(ESlateVisibility::Visible);
+
+    // Si Delay es 0, se queda fijo para siempre
+    if (Delay > 0.0f)
+    {
+        GetWorld()->GetTimerManager().SetTimer(
+            TextTimer,
+            [this]()
+            {
+                if (TutorialText)
+                {
+                    TutorialText->SetText(FText::GetEmpty());
+                }
+
+                if (TextBorder)
+                {
+                    TextBorder->SetVisibility(ESlateVisibility::Hidden);
+                }
+            },
+            Delay,
+            false
+        );
+    }
+}
+
 void UAzulWidgetTutorial::SetTutorialText(const FString& NewText)
 {
     GetWorld()->GetTimerManager().ClearTimer(TextTimer);

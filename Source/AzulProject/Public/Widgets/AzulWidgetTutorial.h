@@ -142,6 +142,9 @@ protected:
     void SetCheckBoxsForSecondPart();
 
     UFUNCTION(BlueprintCallable)
+    void SetTutorialTextWithDelay(const FString& NewText, float Delay);
+
+    UFUNCTION()
     void SetTutorialText(const FString& NewText);
 
     UFUNCTION(BlueprintCallable)
