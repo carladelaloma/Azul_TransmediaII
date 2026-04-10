@@ -69,7 +69,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Azul|InteractionExceptions")
 	void RemoveInteractableException(AActor* Actor);
 
-	UPROPERTY(BlueprintReadOnly, Category = "Azul|Interactuable")
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Azul|Interactuable")
 	bool bCanInteract = false;
 
 
