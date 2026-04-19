@@ -1,4 +1,6 @@
 #include "Widgets/AzulWidgetHUDPlayer.h"
+#include "AzulSubsystem/AzulGameSubsystem.h"
+#include "Engine/GameInstance.h"
 
 void UAzulWidgetHUDPlayer::SetUIState(EInteractUIState NewState)
 {
@@ -26,19 +28,50 @@ void UAzulWidgetHUDPlayer::SetStoryText(const FString& NewText, float Delay)
         return;
     }
 
+    FString FinalText = NewText;
+
+    if (UGameInstance* GI = GetGameInstance())
+    {
+        if (UAzulGameSubsystem* GameSubsystem = GI->GetSubsystem<UAzulGameSubsystem>())
+        {
+            if (!GameSubsystem->SonName.IsEmpty())
+            {
+                FinalText = FinalText.Replace(
+                    TEXT("{SonName}"),
+                    *GameSubsystem->SonName,
+                    ESearchCase::IgnoreCase
+                );
+            }
+        }
+    }
+
     GetWorld()->GetTimerManager().ClearTimer(StoryTextTimer);
 
-    if (NewText.IsEmpty())
+    if (FinalText.IsEmpty())
     {
-        StoryText->SetText(FText::GetEmpty());
-        TextBorder->SetVisibility(ESlateVisibility::Hidden);
+        if (StoryText)
+        {
+            StoryText->SetText(FText::GetEmpty());
+        }
+
+        if (TextBorder)
+        {
+            TextBorder->SetVisibility(ESlateVisibility::Hidden);
+        }
+
         return;
     }
 
-    StoryText->SetText(FText::FromString(NewText));
-    TextBorder->SetVisibility(ESlateVisibility::Visible);
+    if (StoryText)
+    {
+        StoryText->SetText(FText::FromString(FinalText));
+    }
 
-    // Si Delay es 0, se queda fijo para siempre
+    if (TextBorder)
+    {
+        TextBorder->SetVisibility(ESlateVisibility::Visible);
+    }
+
     if (Delay > 0.0f)
     {
         GetWorld()->GetTimerManager().SetTimer(

@@ -1,4 +1,25 @@
-﻿#include "AzulSubsystem/AzulGameSubsystem.h"
+﻿/*
+ * UAzulGameSubsystem - Implementación
+ * ------------------------------------------------------
+ * Este archivo implementa la lógica global del subsystem.
+ *
+ * Aquí se realiza:
+ * - La inicialización de widgets globales al comenzar.
+ * - El registro y refresco del widget de diálogo.
+ * - La comunicación con el diálogo activo.
+ * - La gestión de cinemáticas y vídeos.
+ * - El bloqueo y desbloqueo del control del jugador
+ *   durante secuencias o eventos especiales.
+ *
+ * En el sistema de diálogo, este archivo coordina
+ * la conexión entre:
+ *   1) la lógica del diálogo (UAzulDialogue)
+ *   2) el widget visual (UAzulWidgetDialogueBase)
+ *   3) los actores o Blueprints que solicitan abrir diálogo
+ */
+
+#include "AzulSubsystem/AzulGameSubsystem.h"
+#include "AzulSubsystem/AzulGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/Engine.h"
 #include "GameFramework/PlayerController.h"
@@ -17,19 +38,22 @@ void UAzulGameSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
 
+    UE_LOG(LogTemp, Warning, TEXT("[Subsystem] Initialize START"));
+
     UWorld* World = GetWorld();
+    UE_LOG(LogTemp, Warning, TEXT("[Subsystem] World = %s"), *GetNameSafe(World));
     if (!World) return;
 
     APlayerController* PC = World->GetFirstPlayerController();
+    UE_LOG(LogTemp, Warning, TEXT("[Subsystem] PC = %s"), *GetNameSafe(PC));
     if (!PC) return;
 
     if (IsGameGameplay())
     {
-        if (WidgetHUDPlayerClass) {
-            WidgetHUDPlayer = CreateWidget<UAzulWidgetHUDPlayer>(
-                PC,
-                WidgetHUDPlayerClass
-            );
+        if (WidgetHUDPlayerClass)
+        {
+            WidgetHUDPlayer = CreateWidget<UAzulWidgetHUDPlayer>(PC, WidgetHUDPlayerClass);
+            UE_LOG(LogTemp, Warning, TEXT("[Subsystem] WidgetHUDPlayer creado = %s"), *GetNameSafe(WidgetHUDPlayer));
 
             if (WidgetHUDPlayer)
             {
@@ -37,20 +61,119 @@ void UAzulGameSubsystem::Initialize(FSubsystemCollectionBase& Collection)
                 WidgetHUDPlayer->SetVisibility(ESlateVisibility::Visible);
             }
         }
-       
-        if (WidgetDialogueClass)
-        {
-            WidgetDialogue = CreateWidget<UAzulWidgetDialogueBase>(
-                PC,
-                WidgetDialogueClass
-            );
+    }
 
-            if (WidgetDialogue)
-            {
-                WidgetDialogue->AddToViewport();
-                WidgetDialogue->SetVisibility(ESlateVisibility::Collapsed);
-            }
+    CreateDialogueSystem();
+}
+
+
+void UAzulGameSubsystem::CreateDialogueSystem()
+{
+    UE_LOG(LogTemp, Warning, TEXT("[Subsystem] CreateDialogueSystem START"));
+
+    UWorld* World = GetWorld();
+    if (!World) return;
+
+    APlayerController* PC = World->GetFirstPlayerController();
+    if (!PC) return;
+
+    UAzulGameInstance* GI = Cast<UAzulGameInstance>(GetGameInstance());
+    if (!GI)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[Subsystem] GameInstance no es UAzulGameInstance"));
+        return;
+    }
+
+    UE_LOG(LogTemp, Warning, TEXT("[Subsystem] DialogueWidgetClass desde GI = %s"), *GetNameSafe(GI->DialogueWidgetClass));
+
+    if (!WidgetDialogue && GI->DialogueWidgetClass)
+    {
+        WidgetDialogue = CreateWidget<UAzulWidgetDialogueBase>(PC, GI->DialogueWidgetClass);
+
+        UE_LOG(LogTemp, Warning, TEXT("[Subsystem] WidgetDialogue creado = %s"), *GetNameSafe(WidgetDialogue));
+
+        if (WidgetDialogue)
+        {
+            WidgetDialogue->AddToViewport(100);
+            WidgetDialogue->SetVisibility(ESlateVisibility::Collapsed);
         }
+    }
+
+    if (!ActiveDialogue)
+    {
+        ActiveDialogue = NewObject<UAzulDialogue>(this, UAzulDialogue::StaticClass());
+
+        if (ActiveDialogue)
+        {
+            ActiveDialogue->OnDialogueUpdated.AddDynamic(this, &UAzulGameSubsystem::OnActiveDialogueUpdated);
+            ActiveDialogue->OnDialogueFinished.AddDynamic(this, &UAzulGameSubsystem::OnActiveDialogueFinished);
+        }
+    }
+
+    if (WidgetDialogue)
+    {
+        WidgetDialogue->Dialogue = ActiveDialogue;
+    }
+}
+
+void UAzulGameSubsystem::OpenDialogue(UDataTable* InDialogueTable, bool bRestart, int32 StartID)
+{
+    UE_LOG(LogTemp, Warning, TEXT("[Subsystem] OpenDialogue START"));
+    UE_LOG(LogTemp, Warning, TEXT("[Subsystem] ActiveDialogue = %s | WidgetDialogue = %s | Table = %s"),
+        *GetNameSafe(ActiveDialogue),
+        *GetNameSafe(WidgetDialogue),
+        *GetNameSafe(InDialogueTable));
+
+    if (!ActiveDialogue)
+    {
+        CreateDialogueSystem();
+    }
+
+    if (!ActiveDialogue || !InDialogueTable)
+        return;
+
+    ActiveDialogue->ForceDialogue(StartID);
+    ActiveDialogue->StartDialogue(InDialogueTable, bRestart);
+
+    if (WidgetDialogue)
+    {
+        WidgetDialogue->Dialogue = ActiveDialogue;
+    }
+
+    RefreshDialogueWidget();
+    SetInputForDialogue(true);
+}
+
+void UAzulGameSubsystem::SetInputForDialogue(bool bEnable)
+{
+    UWorld* World = GetWorld();
+    if (!World) return;
+
+    APlayerController* PC = World->GetFirstPlayerController();
+    if (!PC) return;
+
+    if (bEnable)
+    {
+        FInputModeUIOnly InputMode;
+        InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+
+        if (WidgetDialogue)
+        {
+            InputMode.SetWidgetToFocus(WidgetDialogue->TakeWidget());
+        }
+
+        PC->SetInputMode(InputMode);
+        PC->SetShowMouseCursor(true);
+        PC->bEnableClickEvents = true;
+        PC->bEnableMouseOverEvents = true;
+    }
+    else
+    {
+        FInputModeGameOnly InputMode;
+        PC->SetInputMode(InputMode);
+        PC->SetShowMouseCursor(false);
+        PC->bEnableClickEvents = false;
+        PC->bEnableMouseOverEvents = false;
     }
 }
 
@@ -77,7 +200,6 @@ void UAzulGameSubsystem::RefreshDialogueWidget()
         WidgetDialogue->Dialogue = nullptr;
         WidgetDialogue->SetDialogueText(FString());
 
-        // Limpiar nombre
         if (WidgetDialogue->TextName)
         {
             WidgetDialogue->TextName->SetText(FText::GetEmpty());
@@ -88,11 +210,8 @@ void UAzulGameSubsystem::RefreshDialogueWidget()
     }
 
     WidgetDialogue->Dialogue = ActiveDialogue;
-
-    // Texto procesado (ya sustituye {SonName})
     WidgetDialogue->SetDialogueText(GetActiveDialogueText());
 
-    // Nombre del que habla, desde la fila actual de la tabla
     if (ActiveDialogue->CurrentRow && WidgetDialogue->TextName)
     {
         WidgetDialogue->TextName->SetText(
@@ -100,6 +219,7 @@ void UAzulGameSubsystem::RefreshDialogueWidget()
         );
     }
 
+    WidgetDialogue->RefreshDecisionUI();
     WidgetDialogue->SetVisibility(ESlateVisibility::Visible);
 }
 
@@ -126,7 +246,25 @@ void UAzulGameSubsystem::OnActiveDialogueUpdated()
 
 void UAzulGameSubsystem::OnActiveDialogueFinished()
 {
-    ClearDialogue();
+    // Limpia el diálogo activo
+    ActiveDialogue = nullptr;
+
+    if (WidgetDialogue)
+    {
+        WidgetDialogue->Dialogue = nullptr;
+        WidgetDialogue->SetDialogueText(FString());
+
+        if (WidgetDialogue->TextName)
+        {
+            WidgetDialogue->TextName->SetText(FText::GetEmpty());
+        }
+
+        // Ocultar widget pero NO destruirlo
+        WidgetDialogue->SetVisibility(ESlateVisibility::Collapsed);
+    }
+
+    // Restaurar input a juego
+    SetInputForDialogue(false);
 }
 
 void UAzulGameSubsystem::PlayLevelSequence(
@@ -495,12 +633,43 @@ void UAzulGameSubsystem::OnVideoFinished()
 
 void UAzulGameSubsystem::RegisterDialogue(UAzulDialogue* Dialogue)
 {
+    if (ActiveDialogue == Dialogue)
+    {
+        return;
+    }
+
+    if (ActiveDialogue)
+    {
+        ActiveDialogue->OnDialogueUpdated.RemoveDynamic(this, &UAzulGameSubsystem::OnActiveDialogueUpdated);
+        ActiveDialogue->OnDialogueFinished.RemoveDynamic(this, &UAzulGameSubsystem::OnActiveDialogueFinished);
+    }
+
     ActiveDialogue = Dialogue;
+
+    if (ActiveDialogue)
+    {
+        ActiveDialogue->OnDialogueUpdated.AddDynamic(this, &UAzulGameSubsystem::OnActiveDialogueUpdated);
+        ActiveDialogue->OnDialogueFinished.AddDynamic(this, &UAzulGameSubsystem::OnActiveDialogueFinished);
+    }
+
+    RefreshDialogueWidget();
 }
 
 void UAzulGameSubsystem::ClearDialogue()
 {
-    ActiveDialogue = nullptr;
+    if (WidgetDialogue)
+    {
+        WidgetDialogue->Dialogue = ActiveDialogue;
+        WidgetDialogue->SetDialogueText(FString());
+
+        if (WidgetDialogue->TextName)
+        {
+            WidgetDialogue->TextName->SetText(FText::GetEmpty());
+        }
+
+        WidgetDialogue->SetVisibility(ESlateVisibility::Collapsed);
+        SetInputForDialogue(false);
+    }
 }
 
 void UAzulGameSubsystem::RequestAdvanceDialogue()

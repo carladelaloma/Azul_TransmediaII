@@ -1,10 +1,6 @@
 ﻿#include "Dialogos/AzulDialogue.h"
-#include "Components/TextBlock.h"
-#include "Engine/Engine.h" // Para AddOnScreenDebugMessage
-#include "Characters/AzulCharacterBase.h"
-#include "Kismet/GameplayStatics.h"
-#include "Misc/OutputDeviceDebug.h"
 #include "AzulSubsystem/AzulGameSubsystem.h"
+#include "Engine/GameInstance.h"
 
 void UAzulDialogue::StartDialogue(UDataTable* OverrideTable, bool bRestart)
 {
@@ -30,27 +26,23 @@ void UAzulDialogue::StartDialogue(UDataTable* OverrideTable, bool bRestart)
     if (bRestart)
     {
         CurrentID = 1;
-        PlayerScore = 0;
         bHasFinishedTable = false;
     }
 
-    ChoiceButtons.Empty();
-
     LoadCurrentRow();
-    OnDialogueUpdated.Broadcast();
 }
-
 
 void UAzulDialogue::LoadCurrentRow()
 {
-    if (!DialogueTable)
+    if (!CurrentTable)
     {
-        UE_LOG(LogTemp, Error, TEXT("LoadCurrentRow: DialogueTable es NULL"));
+        UE_LOG(LogTemp, Error, TEXT("LoadCurrentRow: CurrentTable es NULL"));
+        OnDialogueFinished.Broadcast();
         return;
     }
 
-    FString RowIDString = FString::FromInt(CurrentID);
-    CurrentRow = DialogueTable->FindRow<FDialogueRow>(*RowIDString, TEXT(""));
+    const FString RowIDString = FString::FromInt(CurrentID);
+    CurrentRow = CurrentTable->FindRow<FDialogueRow>(*RowIDString, TEXT("LoadCurrentRow"));
 
     if (!CurrentRow)
     {
@@ -64,103 +56,24 @@ void UAzulDialogue::LoadCurrentRow()
     OnDialogueUpdated.Broadcast();
 }
 
-
 FString UAzulDialogue::GetCurrentText() const
 {
     if (!CurrentRow)
     {
-        return FString("ERROR: No hay fila actual");
+        return FString();
     }
 
-    FString Text = CurrentRow->Text;
-
-    return Text;
+    return CurrentRow->Text;
 }
 
-
-void UAzulDialogue::UpdateWidget(UHorizontalBox* ChoicesContainer)
+FString UAzulDialogue::GetProcessedCurrentText() const
 {
-    if (!ChoicesContainer || !CurrentRow)
-        return;
-
-    if (ContinueButton)
+    if (!CurrentRow)
     {
-        const bool bIsDecision = CurrentRow->IsDecision;
-
-        // Siempre visible
-        ContinueButton->SetVisibility(ESlateVisibility::Visible);
-
-        // Deshabilitado si es decisión
-        ContinueButton->SetIsEnabled(!bIsDecision);
+        return FString();
     }
 
-    // 1. Primera vez: rellenar el array automáticamente desde el HorizontalBox
-    // SIEMPRE reconstruir los botones
-    ChoiceButtons.Empty();
-
-    const int32 ChildCount = ChoicesContainer->GetChildrenCount();
-    for (int32 i = 0; i < ChildCount; i++)
-    {
-        UWidget* Child = ChoicesContainer->GetChildAt(i);
-        UButton* Btn = Cast<UButton>(Child);
-
-        if (Btn)
-        {
-            ChoiceButtons.Add(Btn);
-        }
-    }
-
-
-    // Si no hay botones → salir
-    if (ChoiceButtons.Num() == 0)
-        return;
-
-    // -------------------------------------------------------
-    // 2. Si NO es decisión → ocultar todos los botones
-    // -------------------------------------------------------
-    if (!CurrentRow->IsDecision)
-    {
-        for (UButton* Btn : ChoiceButtons)
-        {
-            if (Btn)
-                Btn->SetVisibility(ESlateVisibility::Collapsed);
-        }
-
-        return;
-    }
-
-    // -------------------------------------------------------
-    // 3. Mostrar solo los necesarios y poner texto
-    // -------------------------------------------------------
-
-    int32 NumChoices = CurrentRow->ChoicesText.Num();
-
-    for (int32 i = 0; i < ChoiceButtons.Num(); i++)
-    {
-        UButton* Btn = ChoiceButtons[i];
-        if (!Btn) continue;
-
-        if (i < NumChoices)
-        {
-            Btn->SetVisibility(ESlateVisibility::Visible);
-
-            if (UTextBlock* Label = Cast<UTextBlock>(Btn->GetChildAt(0)))
-            {
-                Label->SetText(FText::FromString(CurrentRow->ChoicesText[i]));
-            }
-        }
-        else
-        {
-            Btn->SetVisibility(ESlateVisibility::Collapsed);
-        }
-    }
-}
-
-
-void UAzulDialogue::HandleContinueClicked()
-{
-    ContinueDialogue();
-    OnDialogueUpdated.Broadcast();
+    return ProcessSonName(CurrentRow->Text);
 }
 
 FString UAzulDialogue::ProcessSonName(const FString& InText) const
@@ -171,8 +84,7 @@ FString UAzulDialogue::ProcessSonName(const FString& InText) const
     {
         if (UGameInstance* GI = World->GetGameInstance())
         {
-            if (UAzulGameSubsystem* GameSubsystem =
-                GI->GetSubsystem<UAzulGameSubsystem>())
+            if (UAzulGameSubsystem* GameSubsystem = GI->GetSubsystem<UAzulGameSubsystem>())
             {
                 const FString& SonNameString = GameSubsystem->SonName;
 
@@ -191,35 +103,6 @@ FString UAzulDialogue::ProcessSonName(const FString& InText) const
     return Out;
 }
 
-
-
-void UAzulDialogue::OnChoiceClicked(int32 Index)
-{
-    if (!CurrentRow || !CurrentRow->IsDecision)
-    {
-        UE_LOG(LogTemp, Error, TEXT("OnChoiceClicked llamado en fila NO decisión"));
-        return;
-    }
-
-    if (!CurrentRow->ChoicesNext.IsValidIndex(Index))
-    {
-        UE_LOG(LogTemp, Error, TEXT("ChoiceClicked: índice %d inválido"), Index);
-        return;
-    }
-
-    // 1. Saltar a la fila decidida
-    CurrentID = CurrentRow->ChoicesNext[Index];
-
-    UE_LOG(LogTemp, Warning, TEXT("ChoiceClicked: Avanzando a fila %d"), CurrentID);
-
-    // 2. Cargar la siguiente línea
-    LoadCurrentRow();
-}
-
-
-
-
-
 void UAzulDialogue::ContinueDialogue()
 {
     if (!CurrentRow)
@@ -228,14 +111,14 @@ void UAzulDialogue::ContinueDialogue()
         return;
     }
 
-    // 1. Si es decisión, NO se avanza automáticamente
+    // Si es decisión, no se avanza con continuar; hay que elegir opción
     if (CurrentRow->IsDecision)
     {
-        UE_LOG(LogTemp, Warning, TEXT("ContinueDialogue: Fila %d ES decisión → no avanzar"), CurrentID);
+        UE_LOG(LogTemp, Warning, TEXT("ContinueDialogue: Fila %d ES decisión -> no avanzar"), CurrentID);
         return;
     }
 
-    // 2. Si NextID = 0 → fin del diálogo
+    // Si NextID = 0 -> fin del diálogo
     if (CurrentRow->NextID == 0)
     {
         UE_LOG(LogTemp, Warning, TEXT("ContinueDialogue: Fin del diálogo (NextID = 0)"));
@@ -243,7 +126,7 @@ void UAzulDialogue::ContinueDialogue()
         return;
     }
 
-    // 3. Avance normal
+    // Avance normal
     CurrentID = CurrentRow->NextID;
 
     UE_LOG(LogTemp, Warning, TEXT("ContinueDialogue: Avanzando a fila %d"), CurrentID);
@@ -251,22 +134,26 @@ void UAzulDialogue::ContinueDialogue()
     LoadCurrentRow();
 }
 
-void UAzulDialogue::SetDialogueText(UTextBlock* Text)
+void UAzulDialogue::OnChoiceClicked(int32 ChoiceIndex)
 {
-    if (!Text)
+    if (!CurrentRow || !CurrentRow->IsDecision)
     {
+        UE_LOG(LogTemp, Error, TEXT("OnChoiceClicked llamado en fila NO decisión"));
         return;
     }
 
-    FString CurrentText = GetCurrentText();
+    if (!CurrentRow->ChoicesNext.IsValidIndex(ChoiceIndex))
+    {
+        UE_LOG(LogTemp, Error, TEXT("OnChoiceClicked: índice %d inválido"), ChoiceIndex);
+        return;
+    }
 
-    // reemplazar {SonName}
-    CurrentText = ProcessSonName(CurrentText);
+    // Saltar a la fila decidida
+    CurrentID = CurrentRow->ChoicesNext[ChoiceIndex];
 
-    Text->SetText(FText::FromString(CurrentText));
+    UE_LOG(LogTemp, Warning, TEXT("OnChoiceClicked: Avanzando a fila %d"), CurrentID);
 
-    UE_LOG(LogTemp, Warning, TEXT("SETDIALOGUETEXT ejecutado: %s"), *CurrentText);
-
+    LoadCurrentRow();
 }
 
 void UAzulDialogue::ForceDialogue(int NewID)
@@ -274,14 +161,24 @@ void UAzulDialogue::ForceDialogue(int NewID)
     CurrentID = NewID;
 }
 
-FString UAzulDialogue::GetProcessedCurrentText() const
+bool UAzulDialogue::IsCurrentRowDecision() const
 {
-    if (!CurrentRow)
+    return CurrentRow && CurrentRow->IsDecision;
+}
+
+int32 UAzulDialogue::GetChoicesCount() const
+{
+    return CurrentRow ? CurrentRow->ChoicesText.Num() : 0;
+}
+
+FString UAzulDialogue::GetChoiceText(int32 Index) const
+{
+    if (!CurrentRow || !CurrentRow->ChoicesText.IsValidIndex(Index))
     {
         return FString();
     }
 
-    return ProcessSonName(CurrentRow->Text);
+    return CurrentRow->ChoicesText[Index];
 }
 
 FText UAzulDialogue::GetDialogueText() const

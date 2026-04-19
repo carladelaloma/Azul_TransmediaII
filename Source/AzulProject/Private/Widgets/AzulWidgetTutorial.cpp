@@ -191,7 +191,7 @@ void UAzulWidgetTutorial::FirstPartTutorial(FGameplayTag StepTag, bool bComplete
             TextTimer,
             this,
             &UAzulWidgetTutorial::ApplyTutorialText,
-            1.0f,
+            5.0f,
             false
         );
 
@@ -242,28 +242,14 @@ void UAzulWidgetTutorial::FirstPartTutorial(FGameplayTag StepTag, bool bComplete
         return;
     }
 
-    if (StepTag == FGameplayTag::RequestGameplayTag("Tutorial.OpenManual")) {
+    if (StepTag == FGameplayTag::RequestGameplayTag("Tutorial.OpenManual"))
+    {
         SetTaskCompleted(CheckBox_3, TareaText_3);
 
-        MainText = TEXT("Yes, you've just completed the tutorial.");
-
+        // No mostrar ningún texto al completar el tutorial
         GetWorld()->GetTimerManager().ClearTimer(TextTimer);
-        GetWorld()->GetTimerManager().SetTimer(
-            TextTimer,
-            this,
-            &UAzulWidgetTutorial::ApplyTutorialText,
-            0.1f,
-            false
-        );
-
-        // ⏱ Limpiar texto tras 4 segundos
-        GetWorld()->GetTimerManager().SetTimer(
-            ButtonTimer,
-            this,
-            &UAzulWidgetTutorial::ClearTutorialText,
-            4.0f,
-            false
-        );
+        GetWorld()->GetTimerManager().ClearTimer(ButtonTimer);
+        ClearTutorialText();
 
         return;
     }

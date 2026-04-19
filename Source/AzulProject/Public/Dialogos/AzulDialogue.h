@@ -2,9 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "UObject/NoExportTypes.h"
-#include "Components/HorizontalBox.h"
-#include "Components/Button.h"
-#include "Components/TextBlock.h"
 #include "Engine/DataTable.h"
 #include "AzulDialogue.generated.h"
 
@@ -14,10 +11,10 @@ struct FDialogueRow : public FTableRowBase
     GENERATED_BODY()
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int32 ID;
+    int32 ID = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    bool IsDecision;
+    bool IsDecision = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FString Text;
@@ -26,7 +23,7 @@ struct FDialogueRow : public FTableRowBase
     FString Name;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    int32 NextID;
+    int32 NextID = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     TArray<FString> ChoicesText;
@@ -45,62 +42,53 @@ class AZULPROJECT_API UAzulDialogue : public UObject
 
 public:
 
-    /** SOLO UNA DataTable */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Azul|Dialogo")
-    UDataTable* DialogueTable;
+    UDataTable* DialogueTable = nullptr;
 
-    /** Índice actual en la secuencia */
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Azul|Dialogo")
     int32 CurrentTableIndex = 0;
 
-    /** Repetir tabla hasta terminarla correctamente */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Azul|Dialogo")
     bool bRepeatUntilFinished = false;
 
-    /** Control opcional de reinicio manual */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Azul|Dialogo")
     bool bHasFinishedTable = false;
 
-    /** ID actual */
+    UPROPERTY(BlueprintReadOnly, Category = "Azul|Dialogo")
     int32 CurrentID = 1;
 
-    /** Fila actual */
+    // Puntero interno a la fila actual (no expuesto como UPROPERTY)
     FDialogueRow* CurrentRow = nullptr;
 
-    /* Puntuación */
-    UPROPERTY(BlueprintReadOnly, Category = "Azul|Dialogo")
-    int32 PlayerScore = 0;
-
-    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Azul|Dialogo")
-    UButton* ContinueButton;
-
-    UPROPERTY()
-    TArray<UButton*> ChoiceButtons;
-
-
-    /** Inicializa diálogo (llamado al pulsar E) */
-    UFUNCTION(BlueprintCallable)
+    UFUNCTION(BlueprintCallable, Category = "Azul|Dialogo")
     void StartDialogue(UDataTable* OverrideTable = nullptr, bool bRestart = true);
 
+    UFUNCTION()
     void LoadCurrentRow();
 
-    UFUNCTION(BlueprintCallable)
+    UFUNCTION()
     FString GetCurrentText() const;
 
-    UFUNCTION(BlueprintCallable)
+    UFUNCTION()
     FString GetProcessedCurrentText() const;
 
-    UFUNCTION(BlueprintCallable)
-    void UpdateWidget(UHorizontalBox* ChoicesContainer);
-
-    UFUNCTION(BlueprintCallable)
+    UFUNCTION()
     void ContinueDialogue();
 
-    UFUNCTION(BlueprintCallable)
-    void OnChoiceClicked(int32 ButtonIndex);
+    UFUNCTION()
+    void OnChoiceClicked(int32 ChoiceIndex);
 
-    UFUNCTION(BlueprintCallable)
-    void SetDialogueText(UTextBlock* Text);
+    UFUNCTION()
+    void ForceDialogue(int NewID);
+
+    UFUNCTION()
+    bool IsCurrentRowDecision() const;
+
+    UFUNCTION()
+    int32 GetChoicesCount() const;
+
+    UFUNCTION()
+    FString GetChoiceText(int32 Index) const;
 
     UPROPERTY(BlueprintAssignable)
     FOnDialogueFinished OnDialogueFinished;
@@ -108,28 +96,21 @@ public:
     UPROPERTY(BlueprintAssignable)
     FOnDialogueUpdated OnDialogueUpdated;
 
-    UFUNCTION(BlueprintCallable)
-    void ForceDialogue(int NewID);
-
 protected:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dialogue")
     FText DialogueText;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Dialogue")
-    float DialogueDuration;
+    float DialogueDuration = 0.f;
 
 public:
     FText GetDialogueText() const;
     float GetDialogueDuration() const;
-
     void SetDialogueDuration(float NewDuration);
 
 private:
-
-    UFUNCTION()
-    void HandleContinueClicked();
-
     FString ProcessSonName(const FString& InText) const;
 
+    UPROPERTY()
     UDataTable* CurrentTable = nullptr;
 };

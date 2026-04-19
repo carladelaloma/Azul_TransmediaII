@@ -1,4 +1,23 @@
-﻿#pragma once
+﻿/*
+ * UAzulGameSubsystem
+ * ------------------------------------------------------
+ * Este subsystem centraliza sistemas globales del juego
+ * que deben mantenerse accesibles entre niveles.
+ *
+ * Responsabilidades principales:
+ * - Gestionar el diálogo activo y su widget.
+ * - Crear y mantener widgets persistentes del juego.
+ * - Servir de puente entre Blueprints y sistemas globales.
+ * - Controlar cinemáticas, vídeos y bloqueo del jugador.
+ * - Guardar variables globales compartidas entre niveles
+ *   (por ejemplo SonName, estados y progreso).
+ *
+ * En el sistema de diálogo, este subsystem actúa como
+ * gestor central: conserva la instancia activa del diálogo
+ * y actualiza el widget cuando el contenido cambia.
+ */
+
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
@@ -39,15 +58,15 @@ public:
     UAzulDialogue* ActiveDialogue = nullptr;
 
     /* Registrar un diálogo como activo */
-    UFUNCTION(BlueprintCallable, Category = "Azul|Narrative")
+    UFUNCTION()
     void RegisterDialogue(UAzulDialogue* Dialogue);
 
     /* Finalizar narrativa activa */
-    UFUNCTION(BlueprintCallable, Category = "Azul|Narrative")
+    UFUNCTION()
     void ClearDialogue();
 
     /* Petición genérica de avance (input, tutorial, etc.) */
-    UFUNCTION(BlueprintCallable, Category = "Azul|Narrative")
+    UFUNCTION()
     void RequestAdvanceDialogue();
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Azul|Dialogue")
@@ -59,14 +78,23 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Azul|Dialogue")
     void RegisterDialogueWidget(UAzulWidgetDialogueBase* InWidget);
 
-    UFUNCTION(BlueprintCallable, Category = "Azul|Dialogue")
+    UFUNCTION()
     void RefreshDialogueWidget();
 
-    UFUNCTION(BlueprintCallable, Category = "Azul|Dialogue")
+    UFUNCTION()
     FString GetActiveDialogueText() const;
 
-    UFUNCTION(BlueprintCallable, Category = "Azul|Dialogue")
+    UFUNCTION()
     FString GetDialogueTextFromWidget() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Azul|Dialogue")
+    void OpenDialogue(UDataTable* InDialogueTable, bool bRestart = true, int32 StartID = 1);
+
+    UFUNCTION()
+    void CreateDialogueSystem();
+
+    UFUNCTION()
+    void SetInputForDialogue(bool bEnable);
 
     //-----------------------------------------------------------CINEMÁTICAS
 
@@ -112,13 +140,6 @@ public:
     //----------------------------------CUADROS
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Azul|Cuadros")
     bool bBlendFinishedCR= true;
-
-    //-----------------------------------GORRO
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Azul|Gorro")
-    UStaticMesh* ChosenGorro = nullptr;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Azul|Gorro")
-    FTransform TransformChosenGorro;
 
 
     //-------------------------PLANETAS
