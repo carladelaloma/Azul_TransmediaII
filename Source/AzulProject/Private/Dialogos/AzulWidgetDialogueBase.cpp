@@ -29,27 +29,32 @@ void UAzulWidgetDialogueBase::NativeConstruct()
 
     if (ButtonContinue)
     {
-        ButtonContinue->OnClicked.AddDynamic(this, &UAzulWidgetDialogueBase::PressContinue);
+        ButtonContinue->OnClicked.RemoveDynamic(this, &UAzulWidgetDialogueBase::PressContinue);
+        ButtonContinue->OnClicked.AddUniqueDynamic(this, &UAzulWidgetDialogueBase::PressContinue);
     }
 
     if (ChoiceButton1)
     {
-        ChoiceButton1->OnClicked.AddDynamic(this, &UAzulWidgetDialogueBase::HandleChoice1);
+        ChoiceButton1->OnClicked.RemoveDynamic(this, &UAzulWidgetDialogueBase::HandleChoice1);
+        ChoiceButton1->OnClicked.AddUniqueDynamic(this, &UAzulWidgetDialogueBase::HandleChoice1);
     }
 
     if (ChoiceButton2)
     {
-        ChoiceButton2->OnClicked.AddDynamic(this, &UAzulWidgetDialogueBase::HandleChoice2);
+        ChoiceButton2->OnClicked.RemoveDynamic(this, &UAzulWidgetDialogueBase::HandleChoice2);
+        ChoiceButton2->OnClicked.AddUniqueDynamic(this, &UAzulWidgetDialogueBase::HandleChoice2);
     }
 
     if (ChoiceButton3)
     {
-        ChoiceButton3->OnClicked.AddDynamic(this, &UAzulWidgetDialogueBase::HandleChoice3);
+        ChoiceButton3->OnClicked.RemoveDynamic(this, &UAzulWidgetDialogueBase::HandleChoice3);
+        ChoiceButton3->OnClicked.AddUniqueDynamic(this, &UAzulWidgetDialogueBase::HandleChoice3);
     }
 
     if (ChoiceButton4)
     {
-        ChoiceButton4->OnClicked.AddDynamic(this, &UAzulWidgetDialogueBase::HandleChoice4);
+        ChoiceButton4->OnClicked.RemoveDynamic(this, &UAzulWidgetDialogueBase::HandleChoice4);
+        ChoiceButton4->OnClicked.AddUniqueDynamic(this, &UAzulWidgetDialogueBase::HandleChoice4);
     }
 }
 
@@ -131,6 +136,11 @@ void UAzulWidgetDialogueBase::RefreshDecisionUI()
 {
     if (!Dialogue || !Dialogue->CurrentRow)
     {
+        if (TextName)
+        {
+            TextName->SetText(FText::GetEmpty());
+        }
+
         if (ButtonContinue)
         {
             ButtonContinue->SetVisibility(ESlateVisibility::Collapsed);
@@ -143,6 +153,8 @@ void UAzulWidgetDialogueBase::RefreshDecisionUI()
 
         return;
     }
+
+    SetSpeakerName(Dialogue->CurrentRow->Name);
 
     const bool bIsDecision = Dialogue->CurrentRow->IsDecision;
     const int32 NumChoices = Dialogue->CurrentRow->ChoicesText.Num();
@@ -168,33 +180,37 @@ void UAzulWidgetDialogueBase::RefreshDecisionUI()
             }
         };
 
-    SetupChoiceButton(
-        ChoiceButton1,
-        ChoiceText1,
-        bIsDecision && NumChoices > 0,
-        NumChoices > 0 ? Dialogue->CurrentRow->ChoicesText[0] : FString()
-    );
+    SetupChoiceButton(ChoiceButton1, ChoiceText1, bIsDecision && NumChoices > 0, NumChoices > 0 ? Dialogue->CurrentRow->ChoicesText[0] : FString());
+    SetupChoiceButton(ChoiceButton2, ChoiceText2, bIsDecision && NumChoices > 1, NumChoices > 1 ? Dialogue->CurrentRow->ChoicesText[1] : FString());
+    SetupChoiceButton(ChoiceButton3, ChoiceText3, bIsDecision && NumChoices > 2, NumChoices > 2 ? Dialogue->CurrentRow->ChoicesText[2] : FString());
+    SetupChoiceButton(ChoiceButton4, ChoiceText4, bIsDecision && NumChoices > 3, NumChoices > 3 ? Dialogue->CurrentRow->ChoicesText[3] : FString());
+}
 
-    SetupChoiceButton(
-        ChoiceButton2,
-        ChoiceText2,
-        bIsDecision && NumChoices > 1,
-        NumChoices > 1 ? Dialogue->CurrentRow->ChoicesText[1] : FString()
-    );
+void UAzulWidgetDialogueBase::SetSpeakerName(const FString& NewName)
+{
+    if (!TextName)
+    {
+        return;
+    }
 
-    SetupChoiceButton(
-        ChoiceButton3,
-        ChoiceText3,
-        bIsDecision && NumChoices > 2,
-        NumChoices > 2 ? Dialogue->CurrentRow->ChoicesText[2] : FString()
-    );
+    FString FinalText = NewName;
 
-    SetupChoiceButton(
-        ChoiceButton4,
-        ChoiceText4,
-        bIsDecision && NumChoices > 3,
-        NumChoices > 3 ? Dialogue->CurrentRow->ChoicesText[3] : FString()
-    );
+    if (UGameInstance* GI = GetGameInstance())
+    {
+        if (UAzulGameSubsystem* GameSubsystem = GI->GetSubsystem<UAzulGameSubsystem>())
+        {
+            if (!GameSubsystem->SonName.IsEmpty())
+            {
+                FinalText = FinalText.Replace(
+                    TEXT("{SonName}"),
+                    *GameSubsystem->SonName,
+                    ESearchCase::IgnoreCase
+                );
+            }
+        }
+    }
+
+    TextName->SetText(FText::FromString(FinalText));
 }
 
 void UAzulWidgetDialogueBase::HandleChoice1()

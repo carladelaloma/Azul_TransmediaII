@@ -73,24 +73,28 @@ public:
     UTextBlock* ChoiceText4 = nullptr;
 
     /** Llamado desde el botón continuar */
-    UFUNCTION(BlueprintCallable, Category = "Azul|Dialogue")
+    UFUNCTION()
     void PressContinue();
 
     /** Llamado desde los botones de elección (con índice 0..3) */
-    UFUNCTION(BlueprintCallable, Category = "Azul|Dialogue")
+    UFUNCTION()
     void PressChoice(int32 ChoiceIndex);
 
     /** Pinta el texto del diálogo en el widget */
-    UFUNCTION(BlueprintCallable, Category = "Azul|Dialogue")
+    UFUNCTION()
     void SetDialogueText(const FString& NewText);
 
     /** Devuelve el texto actualmente visible en el widget */
-    UFUNCTION(BlueprintCallable, Category = "Azul|Dialogue")
+    UFUNCTION()
     FString GetDialogueTextString() const;
 
     /** Refresca visibilidad y texto de botones de decisión según CurrentRow */
-    UFUNCTION(BlueprintCallable, Category = "Azul|Dialogue")
+    UFUNCTION()
     void RefreshDecisionUI();
+
+    /** Pinta el nombre del personaje en el widget */
+    UFUNCTION()
+    void SetSpeakerName(const FString& NewName);
 
 protected:
 

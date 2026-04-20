@@ -118,12 +118,15 @@ void UAzulGameSubsystem::CreateDialogueSystem()
 
 void UAzulGameSubsystem::OpenDialogue(UDataTable* InDialogueTable, bool bRestart, int32 StartID)
 {
-    UE_LOG(LogTemp, Warning, TEXT("[Subsystem] OpenDialogue START"));
-    UE_LOG(LogTemp, Warning, TEXT("[Subsystem] ActiveDialogue = %s | WidgetDialogue = %s | Table = %s"),
-        *GetNameSafe(ActiveDialogue),
-        *GetNameSafe(WidgetDialogue),
-        *GetNameSafe(InDialogueTable));
+    UE_LOG(LogTemp, Warning, TEXT("[Subsystem] OpenDialogue START (Table=%s, StartID=%d, bRestart=%s)"),
+        *GetNameSafe(InDialogueTable),
+        StartID,
+        bRestart ? TEXT("true") : TEXT("false"));
 
+    // 1) Asegúrate de que no hay restos de un diálogo anterior
+    ClearDialogue();
+
+    // 2) Crea el sistema si hace falta
     if (!ActiveDialogue)
     {
         CreateDialogueSystem();
@@ -132,12 +135,14 @@ void UAzulGameSubsystem::OpenDialogue(UDataTable* InDialogueTable, bool bRestart
     if (!ActiveDialogue || !InDialogueTable)
         return;
 
+    // 3) Arranca el nuevo diálogo
     ActiveDialogue->ForceDialogue(StartID);
     ActiveDialogue->StartDialogue(InDialogueTable, bRestart);
 
     if (WidgetDialogue)
     {
         WidgetDialogue->Dialogue = ActiveDialogue;
+        WidgetDialogue->SetVisibility(ESlateVisibility::Visible);
     }
 
     RefreshDialogueWidget();
@@ -657,19 +662,21 @@ void UAzulGameSubsystem::RegisterDialogue(UAzulDialogue* Dialogue)
 
 void UAzulGameSubsystem::ClearDialogue()
 {
+    UE_LOG(LogTemp, Warning, TEXT("[Subsystem] ClearDialogue()"));
+
+    // Ocultar y destruir el widget de diálogo
     if (WidgetDialogue)
     {
-        WidgetDialogue->Dialogue = ActiveDialogue;
-        WidgetDialogue->SetDialogueText(FString());
-
-        if (WidgetDialogue->TextName)
-        {
-            WidgetDialogue->TextName->SetText(FText::GetEmpty());
-        }
-
         WidgetDialogue->SetVisibility(ESlateVisibility::Collapsed);
-        SetInputForDialogue(false);
+        WidgetDialogue->RemoveFromParent();
+        WidgetDialogue = nullptr;
     }
+
+    // Soltar referencia al sistema narrativo
+    ActiveDialogue = nullptr;
+
+    // Volver a input de juego normal
+    SetInputForDialogue(false);
 }
 
 void UAzulGameSubsystem::RequestAdvanceDialogue()
