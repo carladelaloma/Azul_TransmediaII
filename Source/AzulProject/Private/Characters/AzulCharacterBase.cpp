@@ -7,6 +7,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "GameFramework/PlayerController.h"
+#include "AzulComponentes/AzulBolsoComponent.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "EnhancedInputComponent.h"
@@ -22,7 +23,7 @@ AAzulCharacterBase::AAzulCharacterBase()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-    //BolsoComponent = CreateDefaultSubobject<UAzulBolsoComponent>(TEXT("BolsoComponent"));
+    BolsoComponent = CreateDefaultSubobject<UAzulBolsoComponent>(TEXT("BolsoComponent"));
 
     CurrentInteractable = nullptr;
 

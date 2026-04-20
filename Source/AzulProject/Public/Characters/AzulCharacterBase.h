@@ -7,7 +7,7 @@
 #include "Interfaces/AzulInteractuableInterface.h"
 #include "InputMappingContext.h"            
 #include "EnhancedInputSubsystems.h" 
-//#include "AzulComponentes/AzulBolsoComponent.h"
+#include "AzulComponentes/AzulBolsoComponent.h"
 #include "Actors/AzulHiloBase.h"
 #include "InputAction.h"
 #include "Widgets/AzulWidgetHUDPlayer.h"
@@ -96,8 +96,8 @@ public:
 	void SetCurrentGameplayTag();
 
 	//---------------------------BOLSO---------------------------------------------
-	//UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Azul|Bolso")
-	//UAzulBolsoComponent* BolsoComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Azul|Bolso")
+	UAzulBolsoComponent* BolsoComponent;
 
 	//---------------------------HILO--------------------------------------------
 
