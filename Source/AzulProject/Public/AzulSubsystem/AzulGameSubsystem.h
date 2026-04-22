@@ -167,6 +167,13 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Azul|Planetas")
     void ChangePlanetsToCompleted();
 
+    //-------------------------COCHONGO
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Azul|Cochongo")
+    bool  bCochongoCompleted = false;
+
+    UFUNCTION(BlueprintCallable, Category = "Azul|Cochongo")
+    void ChangeCochongoToCompleted();
+
     //-------------------------ATICO
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Azul|Atico")
     FString LastLevelBeforeAtico;

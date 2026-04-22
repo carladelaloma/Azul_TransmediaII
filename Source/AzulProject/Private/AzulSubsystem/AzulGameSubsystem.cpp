@@ -739,3 +739,9 @@ FString UAzulGameSubsystem::GetProcessedDialogueTextForUI() const
     const FString ActiveText = ActiveDialogue->GetProcessedCurrentText();
     return ProcessDialoguePlaceholders(ActiveText);
 }
+
+void UAzulGameSubsystem::ChangeCochongoToCompleted()
+{
+    bCochongoCompleted = true;
+    UE_LOG(LogTemp, Warning, TEXT("PlanetsCompleted"));
+}
