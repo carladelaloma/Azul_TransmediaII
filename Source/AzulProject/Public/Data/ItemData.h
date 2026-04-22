@@ -8,20 +8,27 @@
 USTRUCT(BlueprintType)
 struct FItemData
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
 public:
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item")
-    UStaticMesh* Mesh = nullptr;
+	FItemData()
+		: Mesh(nullptr)
+		, Icon(nullptr)
+		, ItemID(NAME_None)
+	{
+	}
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item")
-    UTexture2D* Icon = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	UStaticMesh* Mesh = nullptr;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Item")
-    FName ItemID = NAME_None;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	UTexture2D* Icon = nullptr;
 
-    bool IsValid() const
-    {
-        return Mesh != nullptr;
-    }
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item")
+	FName ItemID = NAME_None;
+
+	bool IsValid() const
+	{
+		return Mesh != nullptr;
+	}
 };

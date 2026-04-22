@@ -51,4 +51,6 @@ private:
 
     UPROPERTY()
     TObjectPtr<AAzulCharacterBase> OwnerCharacter = nullptr;
+
+    bool IsGameplay03() const;
 };

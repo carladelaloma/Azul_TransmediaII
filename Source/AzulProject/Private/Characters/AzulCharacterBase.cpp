@@ -23,7 +23,7 @@ AAzulCharacterBase::AAzulCharacterBase()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-    BolsoComponent = CreateDefaultSubobject<UAzulBolsoComponent>(TEXT("BolsoComponent"));
+    //BolsoComponent = CreateDefaultSubobject<UAzulBolsoComponent>(TEXT("BolsoComponent"));
 
     CurrentInteractable = nullptr;
 

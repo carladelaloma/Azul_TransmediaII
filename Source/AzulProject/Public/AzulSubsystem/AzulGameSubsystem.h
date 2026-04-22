@@ -96,6 +96,25 @@ public:
     UFUNCTION()
     void SetInputForDialogue(bool bEnable);
 
+    //----------------------------------------------------------DIALOGOS|BOLSO
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Azul|Dialogue")
+    FText DialogueItem1Text;
+
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Azul|Dialogue")
+    FText DialogueItem2Text;
+
+    UFUNCTION(BlueprintCallable, Category = "Azul|Dialogue")
+    void SetDialogueItemTexts(const FText& InItem1Text, const FText& InItem2Text);
+
+    UFUNCTION(BlueprintCallable, Category = "Azul|Dialogue")
+    void ClearDialogueItemTexts();
+
+    UFUNCTION()
+    FString GetProcessedDialogueTextForUI() const;
+
+    UFUNCTION()
+    FString ProcessDialoguePlaceholders(const FString& InText) const;
+
     //-----------------------------------------------------------CINEMÁTICAS
 
     UFUNCTION(BlueprintCallable, Category = "Azul|Cinematics")

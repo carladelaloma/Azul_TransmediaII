@@ -215,7 +215,7 @@ void UAzulGameSubsystem::RefreshDialogueWidget()
     }
 
     WidgetDialogue->Dialogue = ActiveDialogue;
-    WidgetDialogue->SetDialogueText(GetActiveDialogueText());
+    WidgetDialogue->SetDialogueText(GetProcessedDialogueTextForUI());
 
     if (ActiveDialogue->CurrentRow && WidgetDialogue->TextName)
     {
@@ -690,4 +690,52 @@ void UAzulGameSubsystem::RequestAdvanceDialogue()
 void UAzulGameSubsystem::ChangePlanetsToCompleted() {
     bPlanetsCompleted = true;
     UE_LOG(LogTemp, Warning, TEXT("PlanetsCompleted"));
+}
+
+void UAzulGameSubsystem::SetDialogueItemTexts(const FText& InItem1Text, const FText& InItem2Text)
+{
+    DialogueItem1Text = InItem1Text;
+    DialogueItem2Text = InItem2Text;
+}
+
+void UAzulGameSubsystem::ClearDialogueItemTexts()
+{
+    DialogueItem1Text = FText::GetEmpty();
+    DialogueItem2Text = FText::GetEmpty();
+}
+
+FString UAzulGameSubsystem::ProcessDialoguePlaceholders(const FString& InText) const
+{
+    FString OutText = InText;
+
+    const bool bContainsItem1 = OutText.Contains(TEXT("{Item1}"));
+    const bool bContainsItem2 = OutText.Contains(TEXT("{Item2}"));
+
+    if (!bContainsItem1 && !bContainsItem2)
+    {
+        return OutText;
+    }
+
+    if (bContainsItem1)
+    {
+        OutText.ReplaceInline(TEXT("{Item1}"), *DialogueItem1Text.ToString());
+    }
+
+    if (bContainsItem2)
+    {
+        OutText.ReplaceInline(TEXT("{Item2}"), *DialogueItem2Text.ToString());
+    }
+
+    return OutText;
+}
+
+FString UAzulGameSubsystem::GetProcessedDialogueTextForUI() const
+{
+    if (!ActiveDialogue)
+    {
+        return FString();
+    }
+
+    const FString ActiveText = ActiveDialogue->GetProcessedCurrentText();
+    return ProcessDialoguePlaceholders(ActiveText);
 }
