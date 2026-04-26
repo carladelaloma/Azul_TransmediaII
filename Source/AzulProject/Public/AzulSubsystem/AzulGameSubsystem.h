@@ -51,6 +51,10 @@ public:
     UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Azul|SonName")
     FString SonName;
 
+    //-------------------------------------LEVEL
+    UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Azul|Level")
+    bool RestartLevel;
+
     //---------------------------------------------------DIALOGOS
 
     /* Diálogo actualmente activo (si lo hay) */
@@ -114,6 +118,14 @@ public:
 
     UFUNCTION()
     FString ProcessDialoguePlaceholders(const FString& InText) const;
+
+    UFUNCTION(BlueprintPure, Category = "Azul|Items")
+    void GetIsItemBools(
+        bool& IsItemBall,
+        bool& IsItemTool,
+        bool& IsItemPotion,
+        bool& IsItemScarf
+    ) const;
 
     //-----------------------------------------------------------CINEMÁTICAS
 

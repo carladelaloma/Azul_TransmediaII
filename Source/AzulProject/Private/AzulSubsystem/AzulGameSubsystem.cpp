@@ -745,3 +745,38 @@ void UAzulGameSubsystem::ChangeCochongoToCompleted()
     bCochongoCompleted = true;
     UE_LOG(LogTemp, Warning, TEXT("PlanetsCompleted"));
 }
+
+void UAzulGameSubsystem::GetIsItemBools(
+    bool& IsItemBall,
+    bool& IsItemTool,
+    bool& IsItemPotion,
+    bool& IsItemScarf
+) const
+{
+    // Inicializar todos a false
+    IsItemBall = false;
+    IsItemTool = false;
+    IsItemPotion = false;
+    IsItemScarf = false;
+
+    // Strings de referencia para los nombres de los ítems
+    const FString ItemBall = TEXT("ball");
+    const FString ItemTool = TEXT("tool");
+    const FString ItemPotion = TEXT("potion");
+    const FString ItemScarf = TEXT("scarf");
+
+    // Convertir FText a FString para comparar
+    FString Item1 = DialogueItem1Text.ToString();
+    FString Item2 = DialogueItem2Text.ToString();
+
+    // Marcar true si el item aparece en el texto
+    auto SetBoolsFromText = [&](const FString& ItemText) {
+        if (ItemText.Equals(ItemBall, ESearchCase::IgnoreCase)) { IsItemBall = true; }
+        if (ItemText.Equals(ItemTool, ESearchCase::IgnoreCase)) { IsItemTool = true; }
+        if (ItemText.Equals(ItemPotion, ESearchCase::IgnoreCase)) { IsItemPotion = true; }
+        if (ItemText.Equals(ItemScarf, ESearchCase::IgnoreCase)) { IsItemScarf = true; }
+        };
+
+    SetBoolsFromText(Item1);
+    SetBoolsFromText(Item2);
+}
